@@ -1,161 +1,190 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width = 800;
+canvas.height = 600;
 
-// Player object
 const player = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    width: 30,
-    height: 30,
-    speed: 5,
-    color: 'blue',
-};
-
-// Enemy object
-const enemies = [{
-    x: 100, // Starting position of the enemy
-    y: 100,
-    width: 30,
-    height: 30,
-    color: 'red',
-    shootCooldown: 1000, // Time between shots in milliseconds
-    lastShot: Date.now() // Track when the enemy last shot
-}];
-
-// Array to store projectiles
-const projectiles = [];
-
-// Define the level transition area
-const levelTransition = {
-    x: canvas.width - 50,
-    y: canvas.height / 2 - 50,
+    x: 50,
+    y: canvas.height / 2 - 25,
     width: 50,
-    height: 100,
+    height: 50,
+    color: 'cyan',
+    speed: 5,
+    bullets: [],
 };
 
-// Key tracking
-const keys = {};
+let keys = {};
+let enemies = [];
+let score = 0;
+let enemySpawnTimer = 0;
+let mouseX = 0;
+let mouseY = 0;
 
-window.addEventListener('keydown', (e) => {
-    keys[e.key] = true;
+let level = 1;
+let levelScoreThreshold = 100;
+let levelUpMessage = "";
+let levelUpMessageTimer = 0;
+
+document.addEventListener('keydown', (e) => keys[e.key] = true);
+document.addEventListener('keyup', (e) => keys[e.key] = false);
+
+// Track mouse position for targeting
+canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
 });
 
-window.addEventListener('keyup', (e) => {
-    keys[e.key] = false;
-});
+// Shoot bullet towards mouse click
+canvas.addEventListener('click', () => shootBullet(mouseX, mouseY));
 
-// Function to check for level transition
-function checkLevelTransition() {
-    if (
-        player.x < levelTransition.x + levelTransition.width &&
-        player.x + player.width > levelTransition.x &&
-        player.y < levelTransition.y + levelTransition.height &&
-        player.y + player.height > levelTransition.y
-    ) {
-        window.location.href = 'level2.html';
+function movePlayer() {
+    if (keys['ArrowUp'] && player.y > 0) player.y -= player.speed;
+    if (keys['ArrowDown'] && player.y + player.height < canvas.height) player.y += player.speed;
+}
+
+function shootBullet(targetX, targetY) {
+    const dx = targetX - (player.x + player.width / 2);
+    const dy = targetY - (player.y + player.height / 2);
+    const angle = Math.atan2(dy, dx);
+
+    const speed = 8;
+    const bullet = {
+        x: player.x + player.width / 2,
+        y: player.y + player.height / 2,
+        width: 10,
+        height: 10,
+        vx: speed * Math.cos(angle),
+        vy: speed * Math.sin(angle),
+    };
+    player.bullets.push(bullet);
+}
+
+function updateBullets() {
+    for (let i = player.bullets.length - 1; i >= 0; i--) {
+        const bullet = player.bullets[i];
+        bullet.x += bullet.vx;
+        bullet.y += bullet.vy;
+
+        if (bullet.x > canvas.width || bullet.x < 0 || bullet.y > canvas.height || bullet.y < 0) {
+            player.bullets.splice(i, 1);
+        }
     }
 }
 
-// Function to shoot projectiles
-function shootProjectile(enemy) {
-    const dx = player.x - enemy.x;
-    const dy = player.y - enemy.y;
-    const angle = Math.atan2(dy, dx);
-    
-    const speed = 5; // Speed of the projectile
-    projectiles.push({
-        x: enemy.x + enemy.width / 2,
-        y: enemy.y + enemy.height / 2,
-        radius: 5, // Radius of the projectile
-        dx: Math.cos(angle) * speed,
-        dy: Math.sin(angle) * speed,
+function spawnEnemy() {
+    enemies.push({
+        x: canvas.width,
+        y: Math.random() * (canvas.height - 50),
+        width: 50,
+        height: 50,
+        speed: 3 + level * 0.5,
+        color: 'red',
     });
 }
 
-// Function to update enemies
 function updateEnemies() {
-    enemies.forEach(enemy => {
-        if (Date.now() - enemy.lastShot > enemy.shootCooldown) {
-            shootProjectile(enemy);
-            enemy.lastShot = Date.now(); // Update last shot time
+    enemySpawnTimer++;
+    if (enemySpawnTimer > Math.max(30, 60 - level * 5)) {
+        spawnEnemy();
+        enemySpawnTimer = 0;
+    }
+
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
+        enemy.x -= enemy.speed;
+
+        if (enemy.x + enemy.width < 0) {
+            enemies.splice(i, 1);
         }
-    });
+    }
 }
 
-// Function to update projectiles
-function updateProjectiles() {
-    projectiles.forEach((projectile, index) => {
-        projectile.x += projectile.dx; // Move projectile
-        projectile.y += projectile.dy;
 
-        // Check for collision with the player
-        if (
-            projectile.x < player.x + player.width &&
-            projectile.x + projectile.radius * 2 > player.x &&
-            projectile.y < player.y + player.height &&
-            projectile.y + projectile.radius * 2 > player.y
-        ) {
-            // Player hit, redirect to level 1
-            window.location.href = 'index.html'; // Redirect back to level 1
-        }
+function checkCollisions() {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
 
-        // Remove projectiles that go off-screen
-        if (projectile.x < 0 || projectile.x > canvas.width || projectile.y < 0 || projectile.y > canvas.height) {
-            projectiles.splice(index, 1); // Remove projectile
+        for (let j = player.bullets.length - 1; j >= 0; j--) {
+            const bullet = player.bullets[j];
+
+            if (
+                bullet.x < enemy.x + enemy.width &&
+                bullet.x + bullet.width > enemy.x &&
+                bullet.y < enemy.y + enemy.height &&
+                bullet.y + bullet.height > enemy.y
+            ) {
+                player.bullets.splice(j, 1);
+                enemies.splice(i, 1);
+                score += 10;
+
+                if (score >= level * levelScoreThreshold) {
+                    levelUp();
+                }
+
+                break;
+            }
         }
-    });
+    }
 }
 
-function update() {
-    if (keys['ArrowUp']) player.y -= player.speed;
-    if (keys['ArrowDown']) player.y += player.speed;
-    if (keys['ArrowLeft']) player.x -= player.speed;
-    if (keys['ArrowRight']) player.x += player.speed;
+function levelUp() {
+    level++;
+    levelUpMessage = `Level ${level}`;
+    levelUpMessageTimer = 60;
 
-    // Keep player within bounds
-    player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
-    player.y = Math.max(0, Math.min(canvas.height - player.height, player.y));
-
-    // Check for level transition
-    checkLevelTransition();
-    
-    // Update enemies and projectiles
-    updateEnemies();
-    updateProjectiles();
+    enemies.forEach(enemy => enemy.speed += 0.5);
+    levelScoreThreshold += 50;
 }
 
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Draw player
+function drawPlayer() {
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, player.width, player.height);
+}
 
-    // Draw enemies
+function drawBullets() {
+    player.bullets.forEach(bullet => {
+        ctx.fillStyle = 'yellow';
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+    });
+}
+
+function drawEnemies() {
     enemies.forEach(enemy => {
         ctx.fillStyle = enemy.color;
         ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
     });
+}
 
-    // Draw projectiles
-    projectiles.forEach(projectile => {
-        ctx.fillStyle = 'orange';
-        ctx.beginPath();
-        ctx.arc(projectile.x, projectile.y, projectile.radius, 0, Math.PI * 2);
-        ctx.fill();
-    });
-
-    // Draw the level transition area
-    ctx.fillStyle = 'red'; // Color for the transition area
-    ctx.fillRect(levelTransition.x, levelTransition.y, levelTransition.width, levelTransition.height);
+function drawScore() {
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.fillText(`Score: ${score}`, 10, 30);
+    ctx.fillText(`Level: ${level}`, 10, 60);
 }
 
 function gameLoop() {
-    update();
-    draw();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    movePlayer();
+    updateBullets();
+    updateEnemies();
+    checkCollisions();
+
+    drawPlayer();
+    drawBullets();
+    drawEnemies();
+    drawScore();
+    
+    if (levelUpMessageTimer > 0) {
+        ctx.fillStyle = 'white';
+        ctx.font = '30px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(levelUpMessage, canvas.width / 2, canvas.height / 2);
+        levelUpMessageTimer--;
+    }
+
     requestAnimationFrame(gameLoop);
 }
 
