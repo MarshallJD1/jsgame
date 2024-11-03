@@ -18,8 +18,7 @@ let keys = {};
 let enemies = [];
 let score = 0;
 let enemySpawnTimer = 0;
-let mouseX = 0;
-let mouseY = 0;
+let playerHealth = 100;  // New player health variable
 
 let level = 1;
 let levelScoreThreshold = 100;
@@ -29,14 +28,12 @@ let levelUpMessageTimer = 0;
 document.addEventListener('keydown', (e) => keys[e.key] = true);
 document.addEventListener('keyup', (e) => keys[e.key] = false);
 
-// Track mouse position for targeting
 canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     mouseX = e.clientX - rect.left;
     mouseY = e.clientY - rect.top;
 });
 
-// Shoot bullet towards mouse click
 canvas.addEventListener('click', () => shootBullet(mouseX, mouseY));
 
 function movePlayer() {
@@ -97,45 +94,51 @@ function updateEnemies() {
 
         if (enemy.x + enemy.width < 0) {
             enemies.splice(i, 1);
+            playerHealth -= 20;
+            if (playerHealth <= 0) gameOver();
         }
     }
 }
 
-
 function checkCollisions() {
     for (let i = enemies.length - 1; i >= 0; i--) {
         const enemy = enemies[i];
+        if (player.x < enemy.x + enemy.width &&
+            player.x + player.width > enemy.x &&
+            player.y < enemy.y + enemy.height &&
+            player.y + player.height > enemy.y) {
+            enemies.splice(i, 1);
+            playerHealth -= 20;
+            if (playerHealth <= 0) gameOver();
+            continue;
+        }
 
         for (let j = player.bullets.length - 1; j >= 0; j--) {
             const bullet = player.bullets[j];
-
-            if (
-                bullet.x < enemy.x + enemy.width &&
+            if (bullet.x < enemy.x + enemy.width &&
                 bullet.x + bullet.width > enemy.x &&
                 bullet.y < enemy.y + enemy.height &&
-                bullet.y + bullet.height > enemy.y
-            ) {
+                bullet.y + bullet.height > enemy.y) {
                 player.bullets.splice(j, 1);
                 enemies.splice(i, 1);
                 score += 10;
-
-                if (score >= level * levelScoreThreshold) {
-                    levelUp();
-                }
-
+                if (score >= level * levelScoreThreshold) levelUp();
                 break;
             }
         }
     }
 }
 
-function levelUp() {
-    level++;
-    levelUpMessage = `Level ${level}`;
-    levelUpMessageTimer = 60;
-
-    enemies.forEach(enemy => enemy.speed += 0.5);
-    levelScoreThreshold += 50;
+function drawHealthBar() {
+    const barWidth = 200;
+    const barHeight = 20;
+    const healthRatio = playerHealth / 100;
+    ctx.fillStyle = 'red';
+    ctx.fillRect(10, 50, barWidth, barHeight);
+    ctx.fillStyle = 'green';
+    ctx.fillRect(10, 50, barWidth * healthRatio, barHeight);
+    ctx.strokeStyle = 'white';
+    ctx.strokeRect(10, 50, barWidth, barHeight);
 }
 
 function drawPlayer() {
@@ -161,22 +164,40 @@ function drawScore() {
     ctx.fillStyle = 'white';
     ctx.font = '20px Arial';
     ctx.fillText(`Score: ${score}`, 10, 30);
-    ctx.fillText(`Level: ${level}`, 10, 60);
+    ctx.fillText(`Level: ${level}`, 10, 80); // Adjusted Y position
+}
+
+function levelUp() {
+    level++;
+    levelUpMessage = `Level ${level}!`;
+    levelUpMessageTimer = 60;  // Show level-up message for 1 second
+
+    // Increase enemy speed slightly
+    enemies.forEach(enemy => enemy.speed += 0.5);
+
+    // Increase score threshold for next level
+    levelScoreThreshold += 50;
+
+    console.log(`Level: ${level}, Score: ${score}, Threshold: ${level * levelScoreThreshold}`);
+}
+
+
+function gameOver() {
+    alert('Game Over! Try again.');
+    document.location.reload();
 }
 
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
     movePlayer();
     updateBullets();
     updateEnemies();
     checkCollisions();
-
     drawPlayer();
     drawBullets();
     drawEnemies();
     drawScore();
-    
+    drawHealthBar();
     if (levelUpMessageTimer > 0) {
         ctx.fillStyle = 'white';
         ctx.font = '30px Arial';
@@ -184,7 +205,6 @@ function gameLoop() {
         ctx.fillText(levelUpMessage, canvas.width / 2, canvas.height / 2);
         levelUpMessageTimer--;
     }
-
     requestAnimationFrame(gameLoop);
 }
 
