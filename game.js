@@ -24,6 +24,10 @@ let level = 1;
 let levelScoreThreshold = 100;
 let levelUpMessage = "";
 let levelUpMessageTimer = 0;
+const bulletSpeed = 8;
+let bulletSize = 10;
+let bulletColor = 'yellow';
+
 
 document.addEventListener('keydown', (e) => keys[e.key] = true);
 document.addEventListener('keyup', (e) => keys[e.key] = false);
@@ -46,17 +50,20 @@ function shootBullet(targetX, targetY) {
     const dy = targetY - (player.y + player.height / 2);
     const angle = Math.atan2(dy, dx);
 
-    const speed = 8;
     const bullet = {
         x: player.x + player.width / 2,
         y: player.y + player.height / 2,
-        width: 10,
-        height: 10,
-        vx: speed * Math.cos(angle),
-        vy: speed * Math.sin(angle),
+        width: bulletSize,
+        height: bulletSize,
+        vx: bulletSpeed * Math.cos(angle),
+        vy: bulletSpeed * Math.sin(angle),
+        color: bulletColor
     };
+
     player.bullets.push(bullet);
 }
+
+
 
 function updateBullets() {
     for (let i = player.bullets.length - 1; i >= 0; i--) {
@@ -148,10 +155,11 @@ function drawPlayer() {
 
 function drawBullets() {
     player.bullets.forEach(bullet => {
-        ctx.fillStyle = 'yellow';
+        ctx.fillStyle = bullet.color;
         ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
     });
 }
+
 
 function drawEnemies() {
     enemies.forEach(enemy => {
@@ -170,16 +178,23 @@ function drawScore() {
 function levelUp() {
     level++;
     levelUpMessage = `Level ${level}!`;
-    levelUpMessageTimer = 60;  // Show level-up message for 1 second
+    levelUpMessageTimer = 60;
 
-    // Increase enemy speed slightly
     enemies.forEach(enemy => enemy.speed += 0.5);
-
-    // Increase score threshold for next level
     levelScoreThreshold += 50;
+
+    // Increase bullet size every 1 levels
+    if (level % 1 === 0) {
+        bulletSize += 2;          // Increase bullet size
+        bulletColor = 'orange';    // Change bullet color for visual effect
+
+        console.log(`Power-up! Bullet size: ${bulletSize}`);
+    }
 
     console.log(`Level: ${level}, Score: ${score}, Threshold: ${level * levelScoreThreshold}`);
 }
+
+
 
 
 function gameOver() {
