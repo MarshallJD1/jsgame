@@ -4,22 +4,24 @@ const ctx = canvas.getContext('2d');
 canvas.width = 800;
 canvas.height = 600;
 
-const player = {
+let player = {
     x: 50,
     y: canvas.height / 2 - 25,
     width: 50,
     height: 50,
-    color: 'cyan',
-    speed: 5,
     bullets: [],
+    shieldCount: 0,
+    speed: 5,
+    color: 'blue'
 };
 
 let keys = {};
 let enemies = [];
 let score = 0;
 let enemySpawnTimer = 0;
-let playerHealth = 100;  // New player health variable
-
+let playerHealth = 100;
+let mouseX = 0;
+let mouseY = 0;
 let level = 1;
 let levelScoreThreshold = 100;
 let levelUpMessage = "";
@@ -27,7 +29,6 @@ let levelUpMessageTimer = 0;
 const bulletSpeed = 8;
 let bulletSize = 10;
 let bulletColor = 'yellow';
-
 
 document.addEventListener('keydown', (e) => keys[e.key] = true);
 document.addEventListener('keyup', (e) => keys[e.key] = false);
@@ -43,6 +44,8 @@ canvas.addEventListener('click', () => shootBullet(mouseX, mouseY));
 function movePlayer() {
     if (keys['ArrowUp'] && player.y > 0) player.y -= player.speed;
     if (keys['ArrowDown'] && player.y + player.height < canvas.height) player.y += player.speed;
+    if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed;
+    if (keys['ArrowRight'] && player.x + player.width < canvas.width) player.x += player.speed;
 }
 
 function shootBullet(targetX, targetY) {
@@ -62,8 +65,6 @@ function shootBullet(targetX, targetY) {
 
     player.bullets.push(bullet);
 }
-
-
 
 function updateBullets() {
     for (let i = player.bullets.length - 1; i >= 0; i--) {
@@ -110,27 +111,55 @@ function updateEnemies() {
 function checkCollisions() {
     for (let i = enemies.length - 1; i >= 0; i--) {
         const enemy = enemies[i];
-        if (player.x < enemy.x + enemy.width &&
-            player.x + player.width > enemy.x &&
-            player.y < enemy.y + enemy.height &&
-            player.y + player.height > enemy.y) {
-            enemies.splice(i, 1);
-            playerHealth -= 20;
-            if (playerHealth <= 0) gameOver();
-            continue;
-        }
 
         for (let j = player.bullets.length - 1; j >= 0; j--) {
             const bullet = player.bullets[j];
-            if (bullet.x < enemy.x + enemy.width &&
+
+            if (
+                bullet.x < enemy.x + enemy.width &&
                 bullet.x + bullet.width > enemy.x &&
                 bullet.y < enemy.y + enemy.height &&
-                bullet.y + bullet.height > enemy.y) {
-                player.bullets.splice(j, 1);
+                bullet.y + bullet.height > enemy.y
+            ) {
                 enemies.splice(i, 1);
+                player.bullets.splice(j, 1);
+                
                 score += 10;
-                if (score >= level * levelScoreThreshold) levelUp();
                 break;
+            }
+        }
+
+        if (enemy.x + enemy.width < 0) {
+            enemies.splice(i, 1);
+
+            if (player.shieldCount > 0) {
+                player.shieldCount--;
+            } else {
+                playerHealth -= 20;
+                if (playerHealth <= 0) {
+                    gameOver();
+                    return;
+                }
+            }
+            continue;
+        }
+
+        if (
+            enemy.x < player.x + player.width &&
+            enemy.x + enemy.width > player.x &&
+            enemy.y < player.y + player.height &&
+            enemy.y + enemy.height > player.y
+        ) {
+            enemies.splice(i, 1);
+
+            if (player.shieldCount > 0) {
+                player.shieldCount--;
+            } else {
+                playerHealth -= 20;
+                if (playerHealth <= 0) {
+                    gameOver();
+                    return;
+                }
             }
         }
     }
@@ -141,11 +170,11 @@ function drawHealthBar() {
     const barHeight = 20;
     const healthRatio = playerHealth / 100;
     ctx.fillStyle = 'red';
-    ctx.fillRect(10, 50, barWidth, barHeight);
+    ctx.fillRect(10, 90, barWidth, barHeight);  // Adjusted Y-position
     ctx.fillStyle = 'green';
-    ctx.fillRect(10, 50, barWidth * healthRatio, barHeight);
+    ctx.fillRect(10, 90, barWidth * healthRatio, barHeight);
     ctx.strokeStyle = 'white';
-    ctx.strokeRect(10, 50, barWidth, barHeight);
+    ctx.strokeRect(10, 90, barWidth, barHeight);
 }
 
 function drawPlayer() {
@@ -160,7 +189,6 @@ function drawBullets() {
     });
 }
 
-
 function drawEnemies() {
     enemies.forEach(enemy => {
         ctx.fillStyle = enemy.color;
@@ -172,7 +200,8 @@ function drawScore() {
     ctx.fillStyle = 'white';
     ctx.font = '20px Arial';
     ctx.fillText(`Score: ${score}`, 10, 30);
-    ctx.fillText(`Level: ${level}`, 10, 80); // Adjusted Y position
+    ctx.fillText(`Level: ${level}`, 10, 50);
+    ctx.fillText(`Shields: ${player.shieldCount}`, 10, 70);
 }
 
 function levelUp() {
@@ -183,19 +212,13 @@ function levelUp() {
     enemies.forEach(enemy => enemy.speed += 0.5);
     levelScoreThreshold += 50;
 
-    // Increase bullet size every 1 levels
-    if (level % 1 === 0) {
-        bulletSize += 2;          // Increase bullet size
-        bulletColor = 'orange';    // Change bullet color for visual effect
+    if (level % 2 === 0) {
+        bulletSize += 2;
+        bulletColor = 'orange';
 
-        console.log(`Power-up! Bullet size: ${bulletSize}`);
+        player.shieldCount++;
     }
-
-    console.log(`Level: ${level}, Score: ${score}, Threshold: ${level * levelScoreThreshold}`);
 }
-
-
-
 
 function gameOver() {
     alert('Game Over! Try again.');
@@ -213,6 +236,12 @@ function gameLoop() {
     drawEnemies();
     drawScore();
     drawHealthBar();
+
+    if (score >= levelScoreThreshold) {
+        levelUp();
+        levelScoreThreshold += level * 50;
+    }
+
     if (levelUpMessageTimer > 0) {
         ctx.fillStyle = 'white';
         ctx.font = '30px Arial';
@@ -220,6 +249,7 @@ function gameLoop() {
         ctx.fillText(levelUpMessage, canvas.width / 2, canvas.height / 2);
         levelUpMessageTimer--;
     }
+
     requestAnimationFrame(gameLoop);
 }
 
