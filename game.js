@@ -1,9 +1,15 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-canvas.width = 800;
-canvas.height = 600;
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    // Optionally adjust player position or other game elements here if needed
+}
 
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();  // Initial call to set the canvas size
 let player = {
     x: 50,
     y: canvas.height / 2 - 25,
