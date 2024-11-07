@@ -86,6 +86,7 @@ function spawnEnemy() {
         height: 50,
         speed: 3 + level * 0.5,
         color: 'red',
+        health: level >= 6 ? 2 : 1  // Give enemies 2 health if level >= 6
     });
 }
 
@@ -121,11 +122,19 @@ function checkCollisions() {
                 bullet.y < enemy.y + enemy.height &&
                 bullet.y + bullet.height > enemy.y
             ) {
-                enemies.splice(i, 1);
+                // Reduce enemy health instead of removing it immediately
+                enemy.health -= 1;
+
+                // Remove bullet after collision
                 player.bullets.splice(j, 1);
-                
-                score += 10;
-                break;
+
+                // If enemy health is 0, remove it and increase score
+                if (enemy.health <= 0) {
+                    enemies.splice(i, 1);
+                    score += 10;
+                }
+
+                break;  // Exit bullet loop after collision
             }
         }
 
@@ -170,7 +179,7 @@ function drawHealthBar() {
     const barHeight = 20;
     const healthRatio = playerHealth / 100;
     ctx.fillStyle = 'red';
-    ctx.fillRect(10, 90, barWidth, barHeight);  // Adjusted Y-position
+    ctx.fillRect(10, 90, barWidth, barHeight);
     ctx.fillStyle = 'green';
     ctx.fillRect(10, 90, barWidth * healthRatio, barHeight);
     ctx.strokeStyle = 'white';
@@ -215,7 +224,6 @@ function levelUp() {
     if (level % 2 === 0) {
         bulletSize += 2;
         bulletColor = 'orange';
-
         player.shieldCount++;
     }
 }
