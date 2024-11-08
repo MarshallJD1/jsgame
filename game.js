@@ -72,12 +72,23 @@ function shootBullet(targetX, targetY) {
     } else if (upgradeCount === 2) {
         // Double bullet size
         const bullet = createBullet(player.x + player.width / 2, player.y + player.height / 2, angle);
-        bullet.width = bullet.height = 20;
+        bullet.width = bullet.height = 20;  // Increase bullet size
         player.bullets.push(bullet);
     } else if (upgradeCount === 3) {
         // Multi-directional shooting: x, y, and diagonal axes
-        const angles = [angle, angle + Math.PI / 4, angle - Math.PI / 4, angle + Math.PI / 2, angle - Math.PI / 2];
-        angles.forEach(ang => player.bullets.push(createBullet(player.x + player.width / 2, player.y + player.height / 2, ang)));
+        // Define multiple angles for multi-directional bullets (x, y, and diagonals)
+        const angles = [
+            angle,                    // Center
+            angle + Math.PI / 4,      // Top-right diagonal
+            angle - Math.PI / 4,      // Top-left diagonal
+            angle + Math.PI / 2,      // Upward
+            angle - Math.PI / 2       // Downward
+        ];
+        
+        // Create and push bullets from the different angles
+        angles.forEach(ang => {
+            player.bullets.push(createBullet(player.x + player.width / 2, player.y + player.height / 2, ang));
+        });
     } else if (upgradeCount === 4) {
         // Homing bullets: slight adjustment of each bullet to target nearest enemy
         const bullet = createBullet(player.x + player.width / 2, player.y + player.height / 2, angle);
@@ -95,6 +106,7 @@ function shootBullet(targetX, targetY) {
         player.bullets.push(bullet);
     }
 }
+
 
 function createBullet(x, y, angle) {
     return {
