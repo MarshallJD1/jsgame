@@ -38,6 +38,7 @@ let bulletColor = 'yellow';
 let powerUps = []; // Array to store active power-ups
 let upgradeCount = 0; // Tracks number of upgrades collected
 let powerUpDroppedThisLevel = false; // Track if a power-up has been dropped in the current level
+let gameStarted = false;
 
 document.addEventListener('keydown', (e) => keys[e.key] = true);
 document.addEventListener('keyup', (e) => keys[e.key] = false);
@@ -48,7 +49,13 @@ canvas.addEventListener('mousemove', (e) => {
     mouseY = e.clientY - rect.top;
 });
 
-canvas.addEventListener('click', () => shootBullet(mouseX, mouseY));
+canvas.addEventListener('click', () => {
+    if (gameStarted) {
+        shootBullet(mouseX, mouseY);
+    } else {
+        handleStartScreenClick();
+    }
+});
 
 function movePlayer() {
     if (keys['ArrowUp'] && player.y > 0) player.y -= player.speed;
@@ -396,6 +403,47 @@ function checkCollisions() {
     }
 }
 
+// Draws the start screen with instructions
+function drawStartScreen() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = 'white';
+    ctx.font = '30px Arial';
+    ctx.textAlign = 'center';
+
+    // Title
+    ctx.fillText("Welcome to the Cubez! - by JMD", canvas.width / 2, 100);
+
+    // Instructions
+    ctx.font = '20px Arial';
+    ctx.fillText("Controls:", canvas.width / 2, 180);
+    ctx.fillText("Move: Arrow keys", canvas.width / 2, 210);
+    ctx.fillText("Shoot: Click to aim and shoot", canvas.width / 2, 240);
+    ctx.fillText("Power-Ups:", canvas.width / 2, 270);
+    ctx.fillText("Double Shot - Level 1", canvas.width / 2, 300);
+    ctx.fillText("Double Bullet Size - Level 2", canvas.width / 2, 330);
+    ctx.fillText("Multi-Directional - Level 3", canvas.width / 2, 360);
+    ctx.fillText("Homing Bullets - Level 4", canvas.width / 2, 390);
+    ctx.fillText("Large Homing Multi-Shot - Level 5", canvas.width / 2, 420);
+
+    // Play button
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(canvas.width / 2 - 50, 460, 100, 40);
+    ctx.fillStyle = 'white';
+    ctx.font = '20px Arial';
+    ctx.fillText("Play", canvas.width / 2, 490);
+}
+
+// Handle Start Screen Clicks
+function handleStartScreenClick() {
+    const rect = canvas.getBoundingClientRect();
+    const x = mouseX;
+    const y = mouseY;
+
+    if (x >= canvas.width / 2 - 50 && x <= canvas.width / 2 + 50 && y >= 460 && y <= 500) {
+        gameStarted = true;
+        requestAnimationFrame(gameLoop); // Start the game loop
+    }
+}
 
 function drawHealthBar() {
     const barWidth = 200;
@@ -470,7 +518,13 @@ function gameOver() {
     document.location.reload();
 }
 
+// Main Game Loop
 function gameLoop() {
+    if (!gameStarted) {
+        drawStartScreen();
+        return;
+    }
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     movePlayer();
     updateBullets();
@@ -479,7 +533,7 @@ function gameLoop() {
     drawPlayer();
     drawBullets();
     drawEnemies();
-    drawPowerUps(); // Add this line to draw power-ups
+    drawPowerUps();
     drawScore();
     drawHealthBar();
 
@@ -498,4 +552,6 @@ function gameLoop() {
 
     requestAnimationFrame(gameLoop);
 }
+
+// Start the initial game loop to display the start screen
 gameLoop();
