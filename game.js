@@ -4,12 +4,12 @@ const ctx = canvas.getContext('2d');
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-    
+
     // Optionally adjust player position or other game elements here if needed
 }
 
 window.addEventListener('resize', resizeCanvas);
-resizeCanvas();  // Initial call to set the canvas size
+resizeCanvas(); // Initial call to set the canvas size
 let player = {
     x: 50,
     y: canvas.height / 2 - 25,
@@ -37,7 +37,7 @@ let bulletSize = 10;
 let bulletColor = 'yellow';
 let powerUps = []; // Array to store active power-ups
 let upgradeCount = 0; // Tracks number of upgrades collected
-let powerUpDroppedThisLevel = false;  // Track if a power-up has been dropped in the current level
+let powerUpDroppedThisLevel = false; // Track if a power-up has been dropped in the current level
 
 document.addEventListener('keydown', (e) => keys[e.key] = true);
 document.addEventListener('keyup', (e) => keys[e.key] = false);
@@ -63,20 +63,16 @@ function shootBullet(targetX, targetY) {
     const angle = Math.atan2(dy, dx);
 
     // Adjust behavior based on upgrade level
-    if (upgradeCount === 1) {
-        // Double shooting pattern: Two bullets from slightly different x-positions
-        const offset = 10;  // Offset for spacing the two bullets
-        const bullet1 = createBullet(player.x + player.width / 2 - offset, player.y + player.height / 2, angle);
-        const bullet2 = createBullet(player.x + player.width / 2 + offset, player.y + player.height / 2, angle);
+    if (upgradeCount === 1 || upgradeCount === 2) {
+        // Double shooting pattern: Two bullets from slightly different y-positions
+        const offset = 20;  // Increase offset for a larger gap between the bullets
+        const bullet1 = createBullet(player.x + player.width / 2, player.y + player.height / 2 - offset, angle);
+        const bullet2 = createBullet(player.x + player.width / 2, player.y + player.height / 2 + offset, angle);
         player.bullets.push(bullet1, bullet2);
-    } else if (upgradeCount === 2) {
-        // Double bullet size
-        const bullet = createBullet(player.x + player.width / 2, player.y + player.height / 2, angle);
-        bullet.width = bullet.height = 20;  // Increase bullet size
-        player.bullets.push(bullet);
-    } else if (upgradeCount === 3) {
-        // Multi-directional shooting: x, y, and diagonal axes
-        // Define multiple angles for multi-directional bullets (x, y, and diagonals)
+    }
+
+    if (upgradeCount >= 3) {
+        // Multi-directional shooting: x, y, and diagonal axes (Upgrade 3 and beyond)
         const angles = [
             angle,                    // Center
             angle + Math.PI / 4,      // Top-right diagonal
@@ -84,28 +80,56 @@ function shootBullet(targetX, targetY) {
             angle + Math.PI / 2,      // Upward
             angle - Math.PI / 2       // Downward
         ];
-        
+
         // Create and push bullets from the different angles
         angles.forEach(ang => {
             player.bullets.push(createBullet(player.x + player.width / 2, player.y + player.height / 2, ang));
         });
-    } else if (upgradeCount === 4) {
-        // Homing bullets: slight adjustment of each bullet to target nearest enemy
+    }
+
+    if (upgradeCount === 4) {
+        // Homing bullets: Track nearest enemy (Upgrade 4)
         const bullet = createBullet(player.x + player.width / 2, player.y + player.height / 2, angle);
         bullet.homing = true;
         player.bullets.push(bullet);
     } else if (upgradeCount === 5) {
-        // Continuous laser (could add a mechanism to create a laser effect)
-        // Placeholder: Single continuous bullet with constant velocity
-        const bullet = createBullet(player.x + player.width / 2, player.y + player.height / 2, angle);
-        bullet.isLaser = true;
-        player.bullets.push(bullet);
+        // Multi-directional shooting with homing (Upgrade 5)
+        const angles = [
+            angle,                    // Center
+            angle + Math.PI / 4,      // Top-right diagonal
+            angle - Math.PI / 4,      // Top-left diagonal
+            angle + Math.PI / 2,      // Upward
+            angle - Math.PI / 2       // Downward
+        ];
+
+        // Create and push bullets from the different angles, and make them homing
+        angles.forEach(ang => {
+            const bullet = createBullet(player.x + player.width / 2, player.y + player.height / 2, ang);
+            bullet.homing = true;
+            bullet.width = bullet.height = 20; // Increase bullet size for upgrade 5
+            player.bullets.push(bullet);
+        });
     } else {
-        // Default single bullet
+        // Default single bullet (for upgrades lower than 1)
         const bullet = createBullet(player.x + player.width / 2, player.y + player.height / 2, angle);
         player.bullets.push(bullet);
     }
 }
+
+
+
+function createBullet(x, y, angle) {
+    return {
+        x: x,
+        y: y,
+        width: bulletSize,
+        height: bulletSize,
+        vx: bulletSpeed * Math.cos(angle),
+        vy: bulletSpeed * Math.sin(angle),
+        color: bulletColor
+    };
+}
+
 
 
 function createBullet(x, y, angle) {
@@ -124,14 +148,47 @@ function createBullet(x, y, angle) {
 function updateBullets() {
     for (let i = player.bullets.length - 1; i >= 0; i--) {
         const bullet = player.bullets[i];
+
+        // If the bullet is homing, adjust its velocity to move towards the nearest enemy
+        if (bullet.homing) {
+            let nearestEnemy = findNearestEnemy(bullet);
+            if (nearestEnemy) {
+                const angleToEnemy = Math.atan2(nearestEnemy.y - bullet.y, nearestEnemy.x - bullet.x);
+                bullet.vx = bulletSpeed * Math.cos(angleToEnemy);
+                bullet.vy = bulletSpeed * Math.sin(angleToEnemy);
+            }
+        }
+
+        // Update bullet position
         bullet.x += bullet.vx;
         bullet.y += bullet.vy;
 
+        // Remove bullet if it goes off-screen
         if (bullet.x > canvas.width || bullet.x < 0 || bullet.y > canvas.height || bullet.y < 0) {
             player.bullets.splice(i, 1);
         }
     }
 }
+
+// Function to find the nearest enemy to a bullet
+function findNearestEnemy(bullet) {
+    let nearestEnemy = null;
+    let shortestDistance = Infinity;
+
+    enemies.forEach(enemy => {
+        const dx = enemy.x - bullet.x;
+        const dy = enemy.y - bullet.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < shortestDistance) {
+            shortestDistance = distance;
+            nearestEnemy = enemy;
+        }
+    });
+
+    return nearestEnemy;
+}
+
 
 function spawnEnemy() {
     enemies.push({
@@ -141,7 +198,7 @@ function spawnEnemy() {
         height: 50,
         speed: 3 + level * 0.5,
         color: 'red',
-        health: level >= 6 ? 2 : 1  // Give enemies 2 health if level >= 6
+        health: level >= 6 ? 2 : 1 // Give enemies 2 health if level >= 6
     });
 }
 
@@ -152,8 +209,8 @@ function spawnPowerUp(x, y) {
         y: y,
         width: 20,
         height: 20,
-        type: upgradeCount + 1,  // Each power-up corresponds to the next upgrade
-        color: 'purple'          // Color to indicate power-up visually
+        type: upgradeCount + 1, // Each power-up corresponds to the next upgrade
+        color: 'purple' // Color to indicate power-up visually
     });
 }
 
@@ -161,7 +218,7 @@ function applyShootingUpgrade() {
     switch (upgradeCount) {
         case 1:
             // Double shooting pattern: two bullets from slightly different positions
-            bulletColor = 'yellow';  // Optional: color change for visual feedback
+            bulletColor = 'yellow'; // Optional: color change for visual feedback
             break;
         case 2:
             // Double bullet size
@@ -209,7 +266,7 @@ function updateEnemies() {
             enemy.y < player.y + player.height &&
             enemy.y + enemy.height > player.y
         ) {
-            enemies.splice(i, 1);  // Remove enemy on collision with player
+            enemies.splice(i, 1); // Remove enemy on collision with player
 
             // Check if player has a shield; otherwise, reduce health
             if (player.shieldCount > 0) {
@@ -245,9 +302,9 @@ function updateEnemies() {
 
                 // Drop power-up if on level 1, 3, 5, 7, or 9 and max upgrades not reached
                 if ([1, 3, 5, 7, 9].includes(level) && upgradeCount < 5 && !powerUpDroppedThisLevel) {
-                    if (Math.random() < 0.3) {  // 30% chance to drop a power-up
+                    if (Math.random() < 0.3) { // 30% chance to drop a power-up
                         spawnPowerUp(enemy.x, enemy.y);
-                        powerUpDroppedThisLevel = true;  // Mark that a power-up has been dropped
+                        powerUpDroppedThisLevel = true; // Mark that a power-up has been dropped
                     }
                 }
                 break;
@@ -268,8 +325,8 @@ function checkCollisions() {
             enemy.y < player.y + player.height &&
             enemy.y + enemy.height > player.y
         ) {
-            enemies.splice(i, 1);  // Remove the enemy on collision with player
-            
+            enemies.splice(i, 1); // Remove the enemy on collision with player
+
             // If player has shields, reduce the shield count; otherwise, reduce health
             if (player.shieldCount > 0) {
                 player.shieldCount--;
@@ -305,13 +362,13 @@ function checkCollisions() {
 
                     // Drop power-up if on level 1, 3, 5, 7, or 9 and max upgrades not reached
                     if ([1, 3, 5, 7, 9].includes(level) && upgradeCount < 5 && !powerUpDroppedThisLevel) {
-                        if (Math.random() < 0.3) {  // 30% chance to drop a power-up
+                        if (Math.random() < 0.3) { // 30% chance to drop a power-up
                             spawnPowerUp(enemy.x, enemy.y);
-                            powerUpDroppedThisLevel = true;  // Mark that a power-up has been dropped
+                            powerUpDroppedThisLevel = true; // Mark that a power-up has been dropped
                         }
                     }
                 }
-                break;  // Stop checking bullets after a hit
+                break; // Stop checking bullets after a hit
             }
         }
     }
@@ -347,7 +404,7 @@ function drawHealthBar() {
     const barX = 20; // Move the bar a little further to the right
 
     ctx.fillStyle = 'red';
-    ctx.fillRect(barX, 90, barWidth, barHeight);  // Adjusted X-position
+    ctx.fillRect(barX, 90, barWidth, barHeight); // Adjusted X-position
     ctx.fillStyle = 'green';
     ctx.fillRect(barX, 90, barWidth * healthRatio, barHeight);
     ctx.strokeStyle = 'white';
@@ -405,7 +462,7 @@ function levelUp() {
         player.shieldCount++;
     }
 
-    powerUpDroppedThisLevel = false;  // Reset flag for the new level
+    powerUpDroppedThisLevel = false; // Reset flag for the new level
 }
 
 function gameOver() {
