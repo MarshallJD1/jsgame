@@ -1,7 +1,7 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-let backgroundMusic = new Audio('path/to/music.mp3'); // Replace with your audio file
+let backgroundMusic = new Audio('audio/synthwave1.wav'); // Replace with your audio file
 backgroundMusic.loop = true; // Loop the music
 
 
@@ -79,8 +79,8 @@ function createMuteButton() {
 // Initialize the mute button
 createMuteButton();
 
-let shootSound = new Audio('path/to/shoot-sound.mp3'); // Replace with your shooting sound file
-let enemyHitSound = new Audio('path/to/enemy-hit-sound.mp3'); // Replace with your ene
+let shootSound = new Audio('audio/shot.ogg'); // Replace with your shooting sound file
+let enemyHitSound = new Audio('audio/hit.ogg'); // Replace with your ene
 let keys = {};
 let enemies = [];
 let score = 0;
