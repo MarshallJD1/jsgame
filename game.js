@@ -1,9 +1,8 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-let backgroundMusic = new Audio('audio/synthwave1.wav'); // Replace with your audio file
+let backgroundMusic = new Audio('audio/synthwave1.ogg'); // Ensure this path is correct
 backgroundMusic.loop = true; // Loop the music
-
 
 function toggleMusic() {
     if (backgroundMusic.paused) {
@@ -16,8 +15,9 @@ function toggleMusic() {
 // Start music when the game starts
 document.addEventListener('click', () => {
     if (!gameStarted) {
-        gameStarted = true;
-        backgroundMusic.play(); // Play background music when game starts
+        startGame();
+    } else {
+        shootBullet(mouseX, mouseY);
     }
 });
 
@@ -79,8 +79,8 @@ function createMuteButton() {
 // Initialize the mute button
 createMuteButton();
 
-let shootSound = new Audio('audio/shot.ogg'); // Replace with your shooting sound file
-let enemyHitSound = new Audio('audio/hit.ogg'); // Replace with your ene
+let shootSound = new Audio('audio/shot.ogg'); // Ensure this path is correct
+let enemyHitSound = new Audio('audio/hit.ogg'); // Ensure this path is correct
 let keys = {};
 let enemies = [];
 let score = 0;
@@ -116,6 +116,46 @@ canvas.addEventListener('click', () => {
         handleStartScreenClick();
     }
 });
+
+function startGame() {
+    gameStarted = true;
+    backgroundMusic.play(); // Play background music when game starts
+    gameLoop(); // Start the game loop
+}
+
+function gameLoop() {
+    if (!gameStarted) {
+        drawStartScreen();
+        return;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    movePlayer();
+    updateBullets();
+    updateEnemies();
+    checkCollisions();
+    drawPlayer();
+    drawBullets();
+    drawEnemies();
+    drawPowerUps();
+    drawScore();
+    drawHealthBar();
+
+    if (score >= levelScoreThreshold) {
+        levelUp();
+        levelScoreThreshold += level * 50;
+    }
+
+    if (levelUpMessageTimer > 0) {
+        ctx.fillStyle = 'white';
+        ctx.font = '30px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(levelUpMessage, canvas.width / 2, canvas.height / 2);
+        levelUpMessageTimer--;
+    }
+
+    requestAnimationFrame(gameLoop);
+}
 
 function movePlayer() {
     if (keys['ArrowUp'] && player.y > 0) player.y -= player.speed;
@@ -186,8 +226,6 @@ function shootBullet(targetX, targetY) {
     }
 }
 
-
-
 function createBullet(x, y, angle) {
     return {
         x: x,
@@ -199,21 +237,6 @@ function createBullet(x, y, angle) {
         color: bulletColor
     };
 }
-
-
-
-function createBullet(x, y, angle) {
-    return {
-        x: x,
-        y: y,
-        width: bulletSize,
-        height: bulletSize,
-        vx: bulletSpeed * Math.cos(angle),
-        vy: bulletSpeed * Math.sin(angle),
-        color: bulletColor
-    };
-}
-
 
 function updateBullets() {
     for (let i = player.bullets.length - 1; i >= 0; i--) {
@@ -259,7 +282,6 @@ function findNearestEnemy(bullet) {
     return nearestEnemy;
 }
 
-
 function spawnEnemy() {
     enemies.push({
         x: canvas.width,
@@ -271,7 +293,6 @@ function spawnEnemy() {
         health: level >= 6 ? 2 : 1 // Give enemies 2 health if level >= 6
     });
 }
-
 
 function spawnPowerUp(x, y) {
     powerUps.push({
@@ -308,7 +329,6 @@ function applyShootingUpgrade() {
             break;
     }
 }
-
 
 function updateEnemies() {
     enemySpawnTimer++;
@@ -427,7 +447,6 @@ function checkCollisions() {
                 if (!isMuted) {
                     enemyHitSound.play(); // Play enemy hit sound
                 }
-
 
                 // If enemy health is 0 or below, remove the enemy and increase score
                 if (enemy.health <= 0) {
@@ -583,41 +602,6 @@ function levelUp() {
 function gameOver() {
     alert('Game Over! Try again.');
     document.location.reload();
-}
-
-// Main Game Loop
-function gameLoop() {
-    if (!gameStarted) {
-        drawStartScreen();
-        return;
-    }
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    movePlayer();
-    updateBullets();
-    updateEnemies();
-    checkCollisions();
-    drawPlayer();
-    drawBullets();
-    drawEnemies();
-    drawPowerUps();
-    drawScore();
-    drawHealthBar();
-
-    if (score >= levelScoreThreshold) {
-        levelUp();
-        levelScoreThreshold += level * 50;
-    }
-
-    if (levelUpMessageTimer > 0) {
-        ctx.fillStyle = 'white';
-        ctx.font = '30px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(levelUpMessage, canvas.width / 2, canvas.height / 2);
-        levelUpMessageTimer--;
-    }
-
-    requestAnimationFrame(gameLoop);
 }
 
 // Start the initial game loop to display the start screen
