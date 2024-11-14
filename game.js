@@ -1,6 +1,26 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+let backgroundMusic = new Audio('path/to/music.mp3'); // Replace with your audio file
+backgroundMusic.loop = true; // Loop the music
+
+
+function toggleMusic() {
+    if (backgroundMusic.paused) {
+        backgroundMusic.play();
+    } else {
+        backgroundMusic.pause();
+    }
+}
+
+// Start music when the game starts
+document.addEventListener('click', () => {
+    if (!gameStarted) {
+        gameStarted = true;
+        backgroundMusic.play(); // Play background music when game starts
+    }
+});
+
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -21,6 +41,46 @@ let player = {
     color: 'blue'
 };
 
+let isMuted = false; // Tracks the mute state
+
+// Toggle music and sound effects
+function toggleMute() {
+    isMuted = !isMuted;
+
+    // Mute or unmute background music
+    if (isMuted) {
+        backgroundMusic.pause();
+    } else {
+        backgroundMusic.play();
+    }
+
+    // Mute or unmute all sound effects (if you have any)
+    // For example, you can mute bullets or enemy sounds by adding similar logic to your sound effect functions
+}
+
+// Create a mute/unmute button
+function createMuteButton() {
+    const button = document.createElement('button');
+    button.innerText = 'Mute/Unmute';
+    button.style.position = 'absolute';
+    button.style.top = '20px';
+    button.style.right = '20px';
+    button.style.padding = '10px';
+    button.style.backgroundColor = 'red';
+    button.style.color = 'white';
+    button.style.border = 'none';
+    button.style.cursor = 'pointer';
+
+    button.addEventListener('click', toggleMute);
+
+    document.body.appendChild(button); // Add button to the page
+}
+
+// Initialize the mute button
+createMuteButton();
+
+let shootSound = new Audio('path/to/shoot-sound.mp3'); // Replace with your shooting sound file
+let enemyHitSound = new Audio('path/to/enemy-hit-sound.mp3'); // Replace with your ene
 let keys = {};
 let enemies = [];
 let score = 0;
@@ -65,6 +125,9 @@ function movePlayer() {
 }
 
 function shootBullet(targetX, targetY) {
+    if (!isMuted) {
+        shootSound.play(); // Play shoot sound
+    }
     const dx = targetX - (player.x + player.width / 2);
     const dy = targetY - (player.y + player.height / 2);
     const angle = Math.atan2(dy, dx);
@@ -72,7 +135,7 @@ function shootBullet(targetX, targetY) {
     // Adjust behavior based on upgrade level
     if (upgradeCount === 1 || upgradeCount === 2) {
         // Double shooting pattern: Two bullets from slightly different y-positions
-        const offset = 20;  // Increase offset for a larger gap between the bullets
+        const offset = 20; // Increase offset for a larger gap between the bullets
         const bullet1 = createBullet(player.x + player.width / 2, player.y + player.height / 2 - offset, angle);
         const bullet2 = createBullet(player.x + player.width / 2, player.y + player.height / 2 + offset, angle);
         player.bullets.push(bullet1, bullet2);
@@ -81,11 +144,11 @@ function shootBullet(targetX, targetY) {
     if (upgradeCount >= 3) {
         // Multi-directional shooting: x, y, and diagonal axes (Upgrade 3 and beyond)
         const angles = [
-            angle,                    // Center
-            angle + Math.PI / 4,      // Top-right diagonal
-            angle - Math.PI / 4,      // Top-left diagonal
-            angle + Math.PI / 2,      // Upward
-            angle - Math.PI / 2       // Downward
+            angle, // Center
+            angle + Math.PI / 4, // Top-right diagonal
+            angle - Math.PI / 4, // Top-left diagonal
+            angle + Math.PI / 2, // Upward
+            angle - Math.PI / 2 // Downward
         ];
 
         // Create and push bullets from the different angles
@@ -102,11 +165,11 @@ function shootBullet(targetX, targetY) {
     } else if (upgradeCount === 5) {
         // Multi-directional shooting with homing (Upgrade 5)
         const angles = [
-            angle,                    // Center
-            angle + Math.PI / 4,      // Top-right diagonal
-            angle - Math.PI / 4,      // Top-left diagonal
-            angle + Math.PI / 2,      // Upward
-            angle - Math.PI / 2       // Downward
+            angle, // Center
+            angle + Math.PI / 4, // Top-right diagonal
+            angle - Math.PI / 4, // Top-left diagonal
+            angle + Math.PI / 2, // Upward
+            angle - Math.PI / 2 // Downward
         ];
 
         // Create and push bullets from the different angles, and make them homing
@@ -361,6 +424,10 @@ function checkCollisions() {
 
                 // Remove the bullet on impact
                 player.bullets.splice(j, 1);
+                if (!isMuted) {
+                    enemyHitSound.play(); // Play enemy hit sound
+                }
+
 
                 // If enemy health is 0 or below, remove the enemy and increase score
                 if (enemy.health <= 0) {
