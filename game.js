@@ -79,7 +79,7 @@ function createMuteButton() {
 // Initialize the mute button
 createMuteButton();
 
-let shootSound = new Audio('audio/shot.ogg'); // Ensure this path is correct
+// let shootSound = new Audio('audio/shot.ogg'); // Ensure this path is correct
 let enemyHitSound = new Audio('audio/hit.ogg'); // Ensure this path is correct
 let keys = {};
 let enemies = [];
