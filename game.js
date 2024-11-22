@@ -79,7 +79,7 @@ function createMuteButton() {
 // Initialize the mute button
 createMuteButton();
 
-// let shootSound = new Audio('audio/shot.ogg'); // Ensure this path is correct
+let shootSound = new Audio('audio/shot.ogg'); // Ensure this path is correct
 let enemyHitSound = new Audio('audio/hit.ogg'); // Ensure this path is correct
 let keys = {};
 let enemies = [];
@@ -165,9 +165,9 @@ function movePlayer() {
 }
 
 function shootBullet(targetX, targetY) {
-    if (!isMuted) {
-        shootSound.play(); // Play shoot sound
-    }
+    // if (!isMuted) {
+    //     shootSound.play(); // Play shoot sound
+    // }
     const dx = targetX - (player.x + player.width / 2);
     const dy = targetY - (player.y + player.height / 2);
     const angle = Math.atan2(dy, dx);
